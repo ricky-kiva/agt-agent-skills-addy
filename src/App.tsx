@@ -1,36 +1,114 @@
+import { useState, useEffect } from 'react';
+import StreakCounter from './components/StreakCounter';
+import MarkDoneButton from './components/MarkDoneButton';
+import FreezeBank from './components/FreezeBank';
+import DeadlineSettings from './components/settings/DeadlineSettings';
+import { loadHabitState, saveHabitState } from './core/storage';
+import {
+  recordStudySession,
+  evaluateInactivity,
+  getHabitStatus,
+  HabitStatus,
+} from './core/streak-engine';
+import { formatLocalDate } from './utils/date';
+import { HabitTrackerState } from './types/habit';
 
 export default function App() {
+  const [today] = useState(() => formatLocalDate(new Date()));
+
+  const [freezeUsed, setFreezeUsed] = useState<boolean>(() => {
+    const loaded = loadHabitState();
+    const evaluated = evaluateInactivity(loaded, formatLocalDate(new Date()));
+    return evaluated.freezes < loaded.freezes;
+  });
+
+  const [state, setState] = useState<HabitTrackerState>(() => {
+    const loaded = loadHabitState();
+    const evaluated = evaluateInactivity(loaded, formatLocalDate(new Date()));
+    if (
+      evaluated.streak !== loaded.streak ||
+      evaluated.freezes !== loaded.freezes ||
+      evaluated.lastStudiedDate !== loaded.lastStudiedDate
+    ) {
+      saveHabitState(evaluated);
+    }
+    return evaluated;
+  });
+
+  // Re-evaluate on window focus to catch day transitions if left open overnight
+  useEffect(() => {
+    const checkInactivity = () => {
+      const currentToday = formatLocalDate(new Date());
+      setState((prev) => {
+        const evaluated = evaluateInactivity(prev, currentToday);
+        if (evaluated.freezes < prev.freezes) {
+          setFreezeUsed(true);
+        }
+        if (
+          evaluated.streak !== prev.streak ||
+          evaluated.freezes !== prev.freezes ||
+          evaluated.lastStudiedDate !== prev.lastStudiedDate
+        ) {
+          saveHabitState(evaluated);
+          return evaluated;
+        }
+        return prev;
+      });
+    };
+
+    window.addEventListener('focus', checkInactivity);
+    return () => window.removeEventListener('focus', checkInactivity);
+  }, []);
+
+  const handleMarkDone = () => {
+    const nextState = recordStudySession(state, today);
+    setState(nextState);
+    setFreezeUsed(false);
+    saveHabitState(nextState);
+  };
+
+  const handleDeadlineChange = (deadlineDays: number) => {
+    const nextState: HabitTrackerState = {
+      ...state,
+      deadlineDays,
+    };
+    setState(nextState);
+    saveHabitState(nextState);
+  };
+
+  const baseStatus = getHabitStatus(state, today);
+  const status: HabitStatus =
+    freezeUsed && baseStatus === 'due' ? 'frozen' : baseStatus;
+  const isCompletedToday = state.lastStudiedDate === today;
+
   return (
     <main className="max-w-md mx-auto p-6 space-y-6">
       <header className="text-center">
-        <h1 className="text-2xl font-bold tracking-tight text-white">Korean Vocabulary</h1>
-        <p className="text-sm text-slate-400 mt-1">Start your streak today!</p>
+        <h1 className="text-2xl font-bold tracking-tight text-white">
+          Korean Vocabulary
+        </h1>
+        <p className="text-xs text-slate-400 mt-1 uppercase tracking-wider">
+          Daily Vocabulary Habit Tracker
+        </p>
       </header>
 
-      <section className="bg-slate-800 rounded-xl p-6 text-center border border-slate-700">
-        <div className="text-6xl font-extrabold text-amber-400">0</div>
-        <div className="text-sm text-slate-400 mt-1 uppercase tracking-wide">Day Streak</div>
-      </section>
+      <StreakCounter streak={state.streak} />
 
-      <section className="bg-slate-800 rounded-xl p-4 border border-slate-700 flex items-center justify-between">
-        <div>
-          <div className="text-sm font-semibold text-slate-200">Freeze Bank</div>
-          <div className="text-xs text-slate-400">0 / 2 freezes available</div>
-        </div>
-        <div className="flex space-x-1 text-xl" aria-label="Freeze slots">
-          <span className="opacity-40">🧊</span>
-          <span className="opacity-40">🧊</span>
-        </div>
-      </section>
+      <FreezeBank
+        freezes={state.freezes}
+        freezeProgress={state.freezeProgress}
+      />
 
-      <section>
-        <button
-          type="button"
-          className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-lg shadow-md transition-colors"
-        >
-          Mark Studied Today
-        </button>
-      </section>
+      <MarkDoneButton
+        isCompletedToday={isCompletedToday}
+        onMarkDone={handleMarkDone}
+      />
+
+      <DeadlineSettings
+        deadlineDays={state.deadlineDays}
+        status={status}
+        onDeadlineChange={handleDeadlineChange}
+      />
     </main>
   );
 }
