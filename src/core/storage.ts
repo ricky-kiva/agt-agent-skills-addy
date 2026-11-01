@@ -1,4 +1,5 @@
 import { HabitTrackerState, DEFAULT_STATE } from '../types/habit';
+import { isValidDateString } from '../utils/date';
 
 export const STORAGE_KEY = 'korean_vocab_habit_tracker';
 
@@ -36,14 +37,9 @@ export function isValidHabitState(data: unknown): data is HabitTrackerState {
     return false;
   }
 
-  if (
-    s.lastStudiedDate !== null &&
-    (typeof s.lastStudiedDate !== 'string' ||
-      !/^\d{4}-\d{2}-\d{2}$/.test(s.lastStudiedDate))
-  ) {
+  if (s.lastStudiedDate !== null && !isValidDateString(s.lastStudiedDate)) {
     return false;
   }
-
   return true;
 }
 
@@ -67,10 +63,12 @@ export function loadHabitState(): HabitTrackerState {
   }
 }
 
-export function saveHabitState(state: HabitTrackerState): void {
+export function saveHabitState(state: HabitTrackerState): boolean {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    return true;
   } catch (error) {
     console.error('Failed to save habit state to localStorage:', error);
+    return false;
   }
 }

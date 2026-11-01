@@ -1,93 +1,23 @@
-import { useState, useEffect } from 'react';
 import StreakCounter from './components/StreakCounter';
 import MarkDoneButton from './components/MarkDoneButton';
 import FreezeBank from './components/FreezeBank';
 import DeadlineSettings from './components/settings/DeadlineSettings';
-import { loadHabitState, saveHabitState } from './core/storage';
-import {
-  recordStudySession,
-  evaluateInactivity,
-  getHabitStatus,
-  HabitStatus,
-} from './core/streak-engine';
-import { formatLocalDate } from './utils/date';
-import { HabitTrackerState } from './types/habit';
+import { useHabitTracker } from './hooks/useHabitTracker';
 
 export default function App() {
-  const [today] = useState(() => formatLocalDate(new Date()));
-
-  const [freezeUsed, setFreezeUsed] = useState<boolean>(() => {
-    const loaded = loadHabitState();
-    const evaluated = evaluateInactivity(loaded, formatLocalDate(new Date()));
-    return evaluated.freezes < loaded.freezes;
-  });
-
-  const [state, setState] = useState<HabitTrackerState>(() => {
-    const loaded = loadHabitState();
-    const evaluated = evaluateInactivity(loaded, formatLocalDate(new Date()));
-    if (
-      evaluated.streak !== loaded.streak ||
-      evaluated.freezes !== loaded.freezes ||
-      evaluated.lastStudiedDate !== loaded.lastStudiedDate
-    ) {
-      saveHabitState(evaluated);
-    }
-    return evaluated;
-  });
-
-  // Re-evaluate on window focus to catch day transitions if left open overnight
-  useEffect(() => {
-    const checkInactivity = () => {
-      const currentToday = formatLocalDate(new Date());
-      setState((prev) => {
-        const evaluated = evaluateInactivity(prev, currentToday);
-        if (evaluated.freezes < prev.freezes) {
-          setFreezeUsed(true);
-        }
-        if (
-          evaluated.streak !== prev.streak ||
-          evaluated.freezes !== prev.freezes ||
-          evaluated.lastStudiedDate !== prev.lastStudiedDate
-        ) {
-          saveHabitState(evaluated);
-          return evaluated;
-        }
-        return prev;
-      });
-    };
-
-    window.addEventListener('focus', checkInactivity);
-    return () => window.removeEventListener('focus', checkInactivity);
-  }, []);
-
-  const handleMarkDone = () => {
-    const nextState = recordStudySession(state, today);
-    setState(nextState);
-    setFreezeUsed(false);
-    saveHabitState(nextState);
-  };
-
-  const handleDeadlineChange = (deadlineDays: number) => {
-    const nextState: HabitTrackerState = {
-      ...state,
-      deadlineDays,
-    };
-    setState(nextState);
-    saveHabitState(nextState);
-  };
-
-  const baseStatus = getHabitStatus(state, today);
-  const status: HabitStatus =
-    freezeUsed && baseStatus === 'due' ? 'frozen' : baseStatus;
-  const isCompletedToday = state.lastStudiedDate === today;
+  const { state, status, isCompletedToday, markDone, setDeadline } =
+    useHabitTracker();
 
   return (
-    <main className="max-w-md mx-auto p-6 space-y-6">
-      <header className="text-center">
+    <main
+      id="main-content"
+      className="max-w-md mx-auto p-6 space-y-6"
+    >
+      <header className="text-center space-y-1">
         <h1 className="text-2xl font-bold tracking-tight text-white">
           Korean Vocabulary
         </h1>
-        <p className="text-xs text-slate-400 mt-1 uppercase tracking-wider">
+        <p className="text-xs text-slate-400 uppercase tracking-widest font-medium">
           Daily Vocabulary Habit Tracker
         </p>
       </header>
@@ -101,14 +31,20 @@ export default function App() {
 
       <MarkDoneButton
         isCompletedToday={isCompletedToday}
-        onMarkDone={handleMarkDone}
+        onMarkDone={markDone}
       />
 
       <DeadlineSettings
         deadlineDays={state.deadlineDays}
         status={status}
-        onDeadlineChange={handleDeadlineChange}
+        onDeadlineChange={setDeadline}
       />
+
+      <footer className="text-center pt-2">
+        <p className="text-xs text-slate-500">
+          Data stored locally on this device in your browser.
+        </p>
+      </footer>
     </main>
   );
 }

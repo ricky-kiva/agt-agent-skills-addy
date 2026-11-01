@@ -1,4 +1,4 @@
-import { HabitTrackerState } from '../types/habit';
+import { HabitTrackerState, FreezeCount, FreezeProgress } from '../types/habit';
 import { getCalendarDaysBetween, addDays } from '../utils/date';
 
 export type HabitStatus = 'empty' | 'completed' | 'due' | 'frozen' | 'reset';
@@ -22,9 +22,10 @@ export function evaluateInactivity(
   }
 
   if (periodsMissed <= state.freezes) {
+    const remainingFreezes = Math.max(0, state.freezes - periodsMissed) as FreezeCount;
     return {
       ...state,
-      freezes: state.freezes - periodsMissed,
+      freezes: remainingFreezes,
       lastStudiedDate: addDays(
         state.lastStudiedDate,
         periodsMissed * state.deadlineDays
@@ -52,19 +53,20 @@ export function recordStudySession(
   const evaluated = evaluateInactivity(state, today);
 
   const nextStreak = evaluated.streak + 1;
-  let nextFreezes = evaluated.freezes;
-  let nextProgress = evaluated.freezeProgress;
+  let nextFreezes: FreezeCount = evaluated.freezes;
+  let nextProgress: FreezeProgress = evaluated.freezeProgress;
 
   if (nextFreezes < 2) {
-    nextProgress += 1;
-    if (nextProgress >= 3) {
-      nextFreezes += 1;
+    const incremented = nextProgress + 1;
+    if (incremented >= 3) {
+      nextFreezes = (nextFreezes + 1) as FreezeCount;
       nextProgress = 0;
+    } else {
+      nextProgress = incremented as FreezeProgress;
     }
   } else {
     nextProgress = 0;
   }
-
   return {
     ...evaluated,
     streak: nextStreak,
