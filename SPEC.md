@@ -36,7 +36,7 @@ export interface HabitTrackerState {
 
 export const DEFAULT_STATE: HabitTrackerState = {
   streak: 0,
-  freezes: 0,
+  freezes: 2, // Starts fully loaded with 2 freezes
   freezeProgress: 0,
   deadlineDays: 1,
   lastStudiedDate: null,

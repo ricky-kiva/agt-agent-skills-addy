@@ -8,11 +8,11 @@ import { DEFAULT_STATE, HabitTrackerState } from '../src/types/habit';
 
 describe('Streak Engine', () => {
   describe('recordStudySession', () => {
-    it('increments streak and freezeProgress on first study session', () => {
+    it('maintains full freezes on first study session with DEFAULT_STATE', () => {
       const state = recordStudySession(DEFAULT_STATE, '2026-11-01');
       expect(state.streak).toBe(1);
-      expect(state.freezeProgress).toBe(1);
-      expect(state.freezes).toBe(0);
+      expect(state.freezeProgress).toBe(0);
+      expect(state.freezes).toBe(2);
       expect(state.lastStudiedDate).toBe('2026-11-01');
     });
 
@@ -23,7 +23,7 @@ describe('Streak Engine', () => {
     });
 
     it('awards 1 freeze after 3 accumulated study sessions', () => {
-      let state = DEFAULT_STATE;
+      let state: HabitTrackerState = { ...DEFAULT_STATE, freezes: 0 };
       state = recordStudySession(state, '2026-11-01'); // streak 1, prog 1
       expect(state.freezes).toBe(0);
 
@@ -37,7 +37,7 @@ describe('Streak Engine', () => {
     });
 
     it('caps freeze bank at 2 maximum freezes', () => {
-      let state = DEFAULT_STATE;
+      let state: HabitTrackerState = { ...DEFAULT_STATE, freezes: 0 };
       // 3 days -> 1 freeze
       state = recordStudySession(state, '2026-11-01');
       state = recordStudySession(state, '2026-11-02');

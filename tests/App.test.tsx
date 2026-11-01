@@ -10,17 +10,17 @@ describe('App End-to-End Integration', () => {
     localStorage.clear();
   });
 
-  it('renders initial clean habit tracker state', () => {
+  it('renders initial clean habit tracker state with full freeze bank', () => {
     render(<App />);
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/Korean Vocabulary/i);
     expect(screen.getByText('0')).toBeInTheDocument();
     expect(screen.getByText(/Start your streak today!/i)).toBeInTheDocument();
-    expect(screen.getByText('0 / 2 freezes available')).toBeInTheDocument();
+    expect(screen.getByText('2 / 2 freezes available')).toBeInTheDocument();
+    expect(screen.getByText(/Bank full/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Mark Studied Today/i })).not.toBeDisabled();
     expect(screen.getByText(/Ready to Start/i)).toBeInTheDocument();
   });
-
   it('performs daily study check-in and persists to localStorage', () => {
     render(<App />);
 
@@ -31,8 +31,9 @@ describe('App End-to-End Integration', () => {
     expect(screen.getByText('1')).toBeInTheDocument();
     expect(screen.getByText(/Day Streak/i)).toBeInTheDocument();
 
-    // Progress updated
-    expect(screen.getByText(/1\/3 days to next freeze/i)).toBeInTheDocument();
+    // Bank remains full at capacity
+    expect(screen.getByText('2 / 2 freezes available')).toBeInTheDocument();
+    expect(screen.getByText(/Bank full/i)).toBeInTheDocument();
 
     // Button disabled and marked complete
     expect(screen.getByRole('button', { name: /Completed Today ✓/i })).toBeDisabled();
@@ -41,7 +42,8 @@ describe('App End-to-End Integration', () => {
     // Persisted to localStorage
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY)!);
     expect(saved.streak).toBe(1);
-    expect(saved.freezeProgress).toBe(1);
+    expect(saved.freezes).toBe(2);
+    expect(saved.freezeProgress).toBe(0);
     expect(saved.lastStudiedDate).toBe(formatLocalDate(new Date()));
   });
 
