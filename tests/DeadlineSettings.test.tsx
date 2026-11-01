@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import DeadlineSettings from '../src/components/settings/DeadlineSettings';
-
+import type { HabitStatus } from '../src/core/streak-engine';
 describe('DeadlineSettings Component', () => {
   it('renders current deadline and status badge', () => {
     render(
@@ -63,5 +63,16 @@ describe('DeadlineSettings Component', () => {
       />
     );
     expect(screen.getByText(/Completed Today/i)).toBeInTheDocument();
+  });
+
+  it('falls back safely to default status badge when status is unrecognized', () => {
+    render(
+      <DeadlineSettings
+        deadlineDays={1}
+        status={'unknown_status' as unknown as HabitStatus}
+        onDeadlineChange={() => {}}
+      />
+    );
+    expect(screen.getByText(/Ready to Start/i)).toBeInTheDocument();
   });
 });

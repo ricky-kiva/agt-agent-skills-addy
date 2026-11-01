@@ -10,21 +10,25 @@ export function isValidDateString(val: unknown): val is string {
     return false;
   }
   const [y, m, d] = val.split('-').map(Number);
-  const date = new Date(y, m - 1, d);
+  if (y < 2000 || y > 2099 || m < 1 || m > 12 || d < 1 || d > 31) {
+    return false;
+  }
+  const date = new Date(Date.UTC(y, m - 1, d));
   return (
-    date.getFullYear() === y &&
-    date.getMonth() === m - 1 &&
-    date.getDate() === d
+    date.getUTCFullYear() === y &&
+    date.getUTCMonth() === m - 1 &&
+    date.getUTCDate() === d
   );
 }
+
 export function getCalendarDaysBetween(fromDateStr: string, toDateStr: string): number {
   const [y1, m1, d1] = fromDateStr.split('-').map(Number);
   const [y2, m2, d2] = toDateStr.split('-').map(Number);
 
-  const from = new Date(y1, m1 - 1, d1);
-  const to = new Date(y2, m2 - 1, d2);
+  const from = Date.UTC(y1, m1 - 1, d1);
+  const to = Date.UTC(y2, m2 - 1, d2);
 
-  const diffMs = to.getTime() - from.getTime();
+  const diffMs = to - from;
   if (diffMs <= 0) {
     return 0;
   }
@@ -34,7 +38,10 @@ export function getCalendarDaysBetween(fromDateStr: string, toDateStr: string): 
 
 export function addDays(dateStr: string, days: number): string {
   const [y, m, d] = dateStr.split('-').map(Number);
-  const date = new Date(y, m - 1, d);
-  date.setDate(date.getDate() + days);
-  return formatLocalDate(date);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  date.setUTCDate(date.getUTCDate() + days);
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }

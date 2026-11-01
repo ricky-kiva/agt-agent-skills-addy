@@ -17,3 +17,32 @@ export const DEFAULT_STATE: Readonly<HabitTrackerState> = {
   deadlineDays: 1,
   lastStudiedDate: null,
 };
+
+export type HabitType = 'vocabulary' | 'grammar';
+
+export interface HabitDefinition {
+  readonly id: HabitType;
+  readonly label: string;
+  readonly title: string;
+  readonly subtitle: string;
+  readonly storageKey: string;
+}
+
+export const HABIT_DEFINITIONS: Record<HabitType, HabitDefinition> = {
+  vocabulary: {
+    id: 'vocabulary',
+    label: 'Vocabulary',
+    title: 'Korean Vocabulary',
+    subtitle: 'Daily Vocabulary Habit Tracker',
+    storageKey: 'korean_vocab_habit_tracker',
+  },
+  grammar: {
+    id: 'grammar',
+    label: 'Grammar',
+    title: 'Korean Grammar',
+    subtitle: 'Daily Grammar Habit Tracker',
+    storageKey: 'korean_grammar_habit_tracker',
+  },
+};
+
+export const DEFAULT_HABIT_TYPE: HabitType = 'vocabulary';

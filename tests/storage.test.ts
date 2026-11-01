@@ -85,4 +85,111 @@ describe('LocalStorage Storage Layer', () => {
     );
     expect(loadHabitState()).toEqual(DEFAULT_STATE);
   });
+
+  it('falls back to DEFAULT_STATE when payload contains prototype pollution keys or extra properties', () => {
+    // Extraneous injection property
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...DEFAULT_STATE,
+        maliciousScript: '<script>alert("xss")</script>',
+      })
+    );
+    expect(loadHabitState()).toEqual(DEFAULT_STATE);
+
+    // Prototype pollution payload
+    localStorage.setItem(
+      STORAGE_KEY,
+      '{"__proto__":{"polluted":true},"streak":0,"freezes":2,"freezeProgress":0,"deadlineDays":1,"lastStudiedDate":null}'
+    );
+    expect(loadHabitState()).toEqual(DEFAULT_STATE);
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+  });
+
+  it('falls back to DEFAULT_STATE on non-object JSON values or arrays', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([DEFAULT_STATE]));
+    expect(loadHabitState()).toEqual(DEFAULT_STATE);
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(12345));
+    expect(loadHabitState()).toEqual(DEFAULT_STATE);
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify('plain-string'));
+    expect(loadHabitState()).toEqual(DEFAULT_STATE);
+  });
+
+  it('falls back to DEFAULT_STATE when logical state invariants are violated', () => {
+    // Streak > 0 but lastStudiedDate is null
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        streak: 5,
+        freezes: 2,
+        freezeProgress: 0,
+        deadlineDays: 1,
+        lastStudiedDate: null,
+      })
+    );
+    expect(loadHabitState()).toEqual(DEFAULT_STATE);
+
+    // Full freezes (2) but non-zero freeze progress
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        streak: 5,
+        freezes: 2,
+        freezeProgress: 1,
+        deadlineDays: 1,
+        lastStudiedDate: '2026-11-01',
+      })
+    );
+    expect(loadHabitState()).toEqual(DEFAULT_STATE);
+  });
+
+  it('falls back to DEFAULT_STATE when lastStudiedDate is invalid or contains XSS strings', () => {
+    // Non-existent calendar date
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        streak: 1,
+        freezes: 2,
+        freezeProgress: 0,
+        deadlineDays: 1,
+        lastStudiedDate: '2026-02-31',
+      })
+    );
+    expect(loadHabitState()).toEqual(DEFAULT_STATE);
+
+    // Script injection in date string
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        streak: 1,
+        freezes: 2,
+        freezeProgress: 0,
+        deadlineDays: 1,
+        lastStudiedDate: '<script>alert(1)</script>',
+      })
+    );
+    expect(loadHabitState()).toEqual(DEFAULT_STATE);
+  });
+
+  it('falls back to DEFAULT_STATE on oversized localStorage payloads', () => {
+    const hugeString = 'x'.repeat(2048);
+    localStorage.setItem(STORAGE_KEY, `{"streak": 0, "pad": "${hugeString}"}`);
+    expect(loadHabitState()).toEqual(DEFAULT_STATE);
+  });
+
+  it('refuses to save invalid habit state in saveHabitState()', () => {
+    const invalid = {
+      streak: -1,
+      freezes: 2,
+      freezeProgress: 0,
+      deadlineDays: 1,
+      lastStudiedDate: null,
+    } as unknown as HabitTrackerState;
+
+    const success = saveHabitState(invalid);
+    expect(success).toBe(false);
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
 });

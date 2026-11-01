@@ -43,4 +43,28 @@ describe('useHabitTracker hook', () => {
     const persisted = JSON.parse(localStorage.getItem(STORAGE_KEY)!);
     expect(persisted.deadlineDays).toBe(5);
   });
+
+  it('ignores invalid deadline values in setDeadline()', () => {
+    const { result } = renderHook(() => useHabitTracker('2026-11-01'));
+
+    act(() => {
+      result.current.setDeadline(0);
+    });
+    expect(result.current.state.deadlineDays).toBe(1);
+
+    act(() => {
+      result.current.setDeadline(-5);
+    });
+    expect(result.current.state.deadlineDays).toBe(1);
+
+    act(() => {
+      result.current.setDeadline(99);
+    });
+    expect(result.current.state.deadlineDays).toBe(1);
+
+    act(() => {
+      result.current.setDeadline(NaN);
+    });
+    expect(result.current.state.deadlineDays).toBe(1);
+  });
 });

@@ -34,7 +34,7 @@ export default function DeadlineSettings({
   status,
   onDeadlineChange,
 }: DeadlineSettingsProps) {
-  const currentStatus = STATUS_LABELS[status];
+  const currentStatus = STATUS_LABELS[status] ?? STATUS_LABELS.empty;
 
   return (
     <section
