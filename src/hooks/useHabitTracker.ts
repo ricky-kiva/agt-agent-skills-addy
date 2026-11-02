@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { loadHabitState, saveHabitState, STORAGE_KEY } from '../core/storage';
+import { useState, useEffect, useCallback } from 'react';
+import { loadHabitState, saveHabitState } from '../core/storage';
 import {
   recordStudySession,
   evaluateInactivity,
@@ -7,7 +7,7 @@ import {
   HabitStatus,
 } from '../core/streak-engine';
 import { formatLocalDate } from '../utils/date';
-import { HabitTrackerState, HabitType, DEFAULT_HABIT_TYPE, HABIT_DEFINITIONS } from '../types/habit';
+import { HabitTrackerState } from '../types/habit';
 
 export interface UseHabitTrackerReturn {
   state: HabitTrackerState;
@@ -17,14 +17,10 @@ export interface UseHabitTrackerReturn {
   setDeadline: (deadlineDays: number) => void;
 }
 
-export function useHabitTracker(
-  initialToday?: string,
-  habitType: HabitType = DEFAULT_HABIT_TYPE
-): UseHabitTrackerReturn {
-  const storageKey = HABIT_DEFINITIONS[habitType]?.storageKey ?? STORAGE_KEY;
-
-  const loadAndEvaluate = useCallback((key: string, todayStr: string) => {
-    const loaded = loadHabitState(key);
+export function useHabitTracker(initialToday?: string): UseHabitTrackerReturn {
+  const [initialBoot] = useState(() => {
+    const todayStr = initialToday ?? formatLocalDate(new Date());
+    const loaded = loadHabitState();
     const evaluated = evaluateInactivity(loaded, todayStr);
     const freezeConsumed = evaluated.freezes < loaded.freezes;
     if (
@@ -32,32 +28,15 @@ export function useHabitTracker(
       evaluated.freezes !== loaded.freezes ||
       evaluated.lastStudiedDate !== loaded.lastStudiedDate
     ) {
-      saveHabitState(evaluated, key);
+      saveHabitState(evaluated);
     }
-    return { evaluated, freezeConsumed };
-  }, []);
-
-  const [initialBoot] = useState(() => {
-    const todayStr = initialToday ?? formatLocalDate(new Date());
-    const bootResult = loadAndEvaluate(storageKey, todayStr);
-    return { ...bootResult, todayStr };
+    return { evaluated, freezeConsumed, todayStr };
   });
 
   const [today] = useState(() => initialBoot.todayStr);
-  const [state, setState] = useState<HabitTrackerState>(() => initialBoot.evaluated);
   const [freezeUsed, setFreezeUsed] = useState<boolean>(() => initialBoot.freezeConsumed);
+  const [state, setState] = useState<HabitTrackerState>(() => initialBoot.evaluated);
 
-  const prevStorageKeyRef = useRef<string>(storageKey);
-
-  // Synchronize when switching habit type
-  useEffect(() => {
-    if (prevStorageKeyRef.current !== storageKey) {
-      prevStorageKeyRef.current = storageKey;
-      const { evaluated, freezeConsumed } = loadAndEvaluate(storageKey, today);
-      setState(evaluated);
-      setFreezeUsed(freezeConsumed);
-    }
-  }, [storageKey, today, loadAndEvaluate]);
   useEffect(() => {
     const checkInactivity = () => {
       const currentToday = initialToday ?? formatLocalDate(new Date());
@@ -71,7 +50,7 @@ export function useHabitTracker(
           if (evaluated.freezes < prev.freezes) {
             setFreezeUsed(true);
           }
-          saveHabitState(evaluated, storageKey);
+          saveHabitState(evaluated);
           return evaluated;
         }
         return prev;
@@ -80,16 +59,16 @@ export function useHabitTracker(
 
     window.addEventListener('focus', checkInactivity);
     return () => window.removeEventListener('focus', checkInactivity);
-  }, [initialToday, storageKey]);
+  }, [initialToday]);
 
   const markDone = useCallback(() => {
     setState((prev) => {
       const next = recordStudySession(prev, today);
-      saveHabitState(next, storageKey);
+      saveHabitState(next);
       return next;
     });
     setFreezeUsed(false);
-  }, [today, storageKey]);
+  }, [today]);
 
   const setDeadline = useCallback((deadlineDays: number) => {
     if (!Number.isInteger(deadlineDays) || deadlineDays < 1 || deadlineDays > 7) {
@@ -101,10 +80,10 @@ export function useHabitTracker(
         return prev;
       }
       const next: HabitTrackerState = { ...prev, deadlineDays };
-      saveHabitState(next, storageKey);
+      saveHabitState(next);
       return next;
     });
-  }, [storageKey]);
+  }, []);
 
   const baseStatus = getHabitStatus(state, today);
   const status: HabitStatus =

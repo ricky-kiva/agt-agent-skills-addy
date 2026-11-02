@@ -1,8 +1,7 @@
-import { HabitTrackerState, DEFAULT_STATE, HabitType, DEFAULT_HABIT_TYPE, HABIT_DEFINITIONS } from '../types/habit';
+import { HabitTrackerState, DEFAULT_STATE } from '../types/habit';
 import { isValidDateString } from '../utils/date';
 
 export const STORAGE_KEY = 'korean_vocab_habit_tracker';
-export const ACTIVE_HABIT_KEY = 'korean_habit_active_type';
 export const MAX_RAW_STORAGE_LENGTH = 1024;
 
 const ALLOWED_KEYS: Record<string, true> = {
@@ -87,10 +86,9 @@ export function sanitizeHabitState(data: unknown): HabitTrackerState | null {
 export function isValidHabitState(data: unknown): data is HabitTrackerState {
   return sanitizeHabitState(data) !== null;
 }
-
-export function loadHabitState(key: string = STORAGE_KEY): HabitTrackerState {
+export function loadHabitState(): HabitTrackerState {
   try {
-    const raw = localStorage.getItem(key);
+    const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
       return DEFAULT_STATE;
     }
@@ -115,39 +113,17 @@ export function loadHabitState(key: string = STORAGE_KEY): HabitTrackerState {
   }
 }
 
-export function saveHabitState(state: HabitTrackerState, key: string = STORAGE_KEY): boolean {
+export function saveHabitState(state: HabitTrackerState): boolean {
   try {
     const sanitized = sanitizeHabitState(state);
     if (sanitized === null) {
       console.error('Refusing to persist invalid habit state to localStorage:', state);
       return false;
     }
-    localStorage.setItem(key, JSON.stringify(sanitized));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitized));
     return true;
   } catch (error) {
     console.error('Failed to save habit state to localStorage:', error);
     return false;
-  }
-}
-
-export function loadActiveHabitType(): HabitType {
-  try {
-    const raw = localStorage.getItem(ACTIVE_HABIT_KEY);
-    if (raw && Object.prototype.hasOwnProperty.call(HABIT_DEFINITIONS, raw)) {
-      return raw as HabitType;
-    }
-  } catch {
-    // Fallback on error
-  }
-  return DEFAULT_HABIT_TYPE;
-}
-
-export function saveActiveHabitType(type: HabitType): void {
-  try {
-    if (Object.prototype.hasOwnProperty.call(HABIT_DEFINITIONS, type)) {
-      localStorage.setItem(ACTIVE_HABIT_KEY, type);
-    }
-  } catch (error) {
-    console.error('Failed to save active habit type to localStorage:', error);
   }
 }
