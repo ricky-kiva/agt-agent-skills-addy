@@ -71,7 +71,12 @@ export default function DeadlineSettings({
                 aria-label="Inactivity Deadline"
                 aria-describedby="deadline-hint"
                 value={deadlineDays}
-                onChange={(e) => onDeadlineChange(Number(e.target.value))}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  if (Number.isInteger(val) && val >= 1 && val <= 7) {
+                    onDeadlineChange(val);
+                  }
+                }}
                 className="bg-secondary/80 border border-border text-foreground text-sm rounded-lg px-3 py-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring cursor-pointer transition-colors shadow-sm"
               >
                 <option value={1}>Daily (1 Day)</option>

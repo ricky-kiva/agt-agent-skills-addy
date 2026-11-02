@@ -10,7 +10,12 @@ export interface ProgressProps
 
 export const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
   ({ className, value = 0, max = 100, indicatorClassName, ...props }, ref) => {
-    const percentage = Math.min(Math.max((value / max) * 100, 0), 100);
+    const safeMax = typeof max === 'number' && max > 0 ? max : 100;
+    const safeValue = typeof value === 'number' && Number.isFinite(value) ? value : 0;
+    const rawPercentage = (safeValue / safeMax) * 100;
+    const percentage = Number.isFinite(rawPercentage)
+      ? Math.min(Math.max(rawPercentage, 0), 100)
+      : 0;
 
     return (
       <div

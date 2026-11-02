@@ -50,4 +50,21 @@ describe('Shadcn UI Primitives', () => {
     expect(progress).toHaveAttribute('aria-valuenow', '50');
     expect(progress).toHaveAttribute('aria-valuemax', '100');
   });
+
+  it('safely handles division by zero, NaN, and boundary clamping in Progress', () => {
+    const { rerender } = render(
+      <Progress value={0} max={0} aria-label="Zero max" />
+    );
+    const progressZero = screen.getByRole('progressbar');
+    expect(progressZero).toBeInTheDocument();
+
+    // Negative and NaN values
+    rerender(<Progress value={NaN} max={100} aria-label="NaN value" />);
+    expect(screen.getByRole('progressbar')).toBeInTheDocument();
+
+    // Value clamping above max
+    rerender(<Progress value={150} max={100} aria-label="Overflow value" />);
+    const indicator = screen.getByRole('progressbar').firstElementChild;
+    expect(indicator).toHaveStyle({ transform: 'translateX(-0%)' });
+  });
 });
