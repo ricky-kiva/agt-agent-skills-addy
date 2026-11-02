@@ -1,3 +1,6 @@
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+
 interface MarkDoneButtonProps {
   isCompletedToday: boolean;
   onMarkDone: () => void;
@@ -8,20 +11,22 @@ export default function MarkDoneButton({
   onMarkDone,
 }: MarkDoneButtonProps) {
   return (
-    <section aria-label="Habit Completion Action">
-      <button
+    <section aria-label="Habit Completion Action" className="w-full">
+      <Button
         type="button"
+        size="lg"
         disabled={isCompletedToday}
         aria-disabled={isCompletedToday}
         onClick={onMarkDone}
-        className={`w-full py-3.5 px-4 rounded-xl font-semibold text-base transition-all duration-150 shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 ${
+        className={cn(
+          'w-full h-14 text-base font-semibold tracking-wide transition-all duration-200 shadow-md',
           isCompletedToday
-            ? 'bg-slate-700/80 text-slate-400 cursor-not-allowed border border-slate-600/80'
-            : 'bg-emerald-600 hover:bg-emerald-500 text-white focus-visible:ring-emerald-400 cursor-pointer active:scale-[0.98]'
-        }`}
+            ? 'bg-slate-800/80 text-slate-400 border border-slate-700/80 cursor-not-allowed shadow-none'
+            : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-950/40 hover:shadow-emerald-900/40 hover:-translate-y-0.5 active:translate-y-0'
+        )}
       >
         {isCompletedToday ? 'Completed Today ✓' : 'Mark Studied Today'}
-      </button>
+      </Button>
     </section>
   );
 }
